@@ -160,3 +160,109 @@ private:
     volatile int32_t _encoderCount;
 };
 
+class Position{
+public:
+    Position(Tachometer &left_tachometer, Tachometer &right_tachometer): _rightTachometer(right_tachometer), _leftTachometer(right_tachometer) {};
+    float get_average(void){
+        float r = _rightTachometer.get_distance();
+        float l = _leftTachometer.get_distance();
+        float average = (l + r) / 2.0f;
+        return average;
+    }
+    void set_zero(void){
+        _rightTachometer.set_zero();
+        _leftTachometer.set_zero();
+    }
+private:
+    Tachometer &_rightTachometer;
+    Tachometer &_leftTachometer;
+};
+
+class Navigation {
+
+public:
+    Navigation() : x(0), y(0), angle(0) {
+        memset(_map, false, sizeof(_map));
+    }
+
+    // Function to rotate the robot by a given angle
+    void rotate(int deltaAngle) {
+        angle = (angle + deltaAngle) % 360;
+        if (angle < 0) angle += 360;
+    }
+
+    void setCurrentCell( void ){
+        _map[x][y] = true;
+    }
+    // Function to move the robot forward by a given distance
+    void moveForward(int distance) {
+        bool t;
+        for (int i = 0; i < distance; ++i) {
+            getNextPosition(angle, x, y);
+            // Ensure the position is within bounds
+            if (x >= 0 && x < 8 && y >= 0 && y < 8) {
+                if(i != (distance - 1)){
+                    setCurrentCell();
+                }
+            } else {
+                break;
+            }
+        }
+    }
+
+    // Function to get the current position
+    void getPosition(int &outX, int &outY, int &outAngle) {
+        outX = x;
+        outY = y;
+        outAngle = angle;
+    }
+
+    // Function to check if the front cell is free
+    bool isFrontFree() {
+        int nextX, nextY;
+        getNextPosition(angle, nextX, nextY);
+        return (nextX >= 0 && nextX < 8 && nextY >= 0 && nextY < 8 && !(_map[nextX][nextY]));
+    }
+
+    // Function to check if the left cell is free
+    bool isLeftFree() {
+        int nextX, nextY;
+        getNextPosition((angle + 270) % 360, nextX, nextY); // Left is 270 degrees counterclockwise
+        return (nextX >= 0 && nextX < 8 && nextY >= 0 && nextY < 8 && !(_map[nextX][nextY]));
+    }
+
+    // Function to check if the right cell is free
+    bool isRightFree() {
+        int nextX, nextY;
+        getNextPosition((angle + 90) % 360, nextX, nextY); // Right is 90 degrees clockwise
+        return (nextX >= 0 && nextX < 8 && nextY >= 0 && nextY < 8 && !(_map[nextX][nextY]));
+    }
+
+    bool isCurrentFree() {
+        return (_map[x][y]);
+    }
+    
+private:
+    void getNextPosition(int currentAngle, int &nextX, int &nextY) {
+        nextX = x;
+        nextY = y;
+        switch (currentAngle) {
+            case 0:
+                nextX += 1;
+                break;
+            case 90:
+                nextY += 1;
+                break;
+            case 180:
+                nextX -= 1;
+                break;
+            case 270:
+                nextY -= 1;
+                break;
+        }
+    }
+
+    bool _map[8][8]; // 8x8 map
+    int x, y;   // Absolute position
+    int angle;  // Angle in degrees
+};
